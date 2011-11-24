@@ -18,30 +18,36 @@ import imaplib
 import pprint
 import email
 
-def get_credentials():
+def get_args():
     """Read credentials from command line arguments"""
     parser = argparse.ArgumentParser()
     parser.add_argument('-u', '--username', required=True)
     parser.add_argument('-p', '--password', required=True)
+    parser.add_argument('action')
     args = parser.parse_args()
-    return (args.username, args.password)
+    return args
 
-# test 1 : list contents of Notes folder
-# accept u/p on command line
-(username, password) = get_credentials()
+def list_notes(args):
+    """list contents of Notes folder"""
+    username, password = args.username, args.password
+    
+    # connect to imap server
+    imap = imaplib.IMAP4_SSL('imap.gmail.com')
+    imap.login(username, password)
+    
+    # grab a list the id, date and subject of messages in the Notes folder
+    imap.select("Notes")
+    (typ, msgnums) = imap.search(None, "All")
+    
+    # print the id, date and subject to stdout
+    for imap_id in bytes.decode(msgnums[0]).split():
+        typ, msgdata = imap.fetch(imap_id, '(RFC822)')    
+        encoded_msg = bytes.decode(msgdata[0][1])
+        msg = email.message_from_string(encoded_msg)    
+        print(imap_id, msg['Date'], msg['Subject'])
 
-# connect to imap server
-imap = imaplib.IMAP4_SSL('imap.gmail.com')
-imap.login(username, password)
-
-# grab a list the id, date and subject of messages in the Notes folder
-imap.select("Notes")
-(typ, msgnums) = imap.search(None, "All")
-
-# print the id, date and subject to stdout
-for mid in bytes.decode(msgnums[0]).split():
-    typ, msgdata = imap.fetch(mid, '(RFC822)')    
-    msg = bytes.decode(msgdata[0][1])
-    em = email.message_from_string(msg)    
-    print(mid, em['Date'], em['Subject'])
+if __name__ == "__main__":
+    args = get_args()
+    if args.action == 'list':
+        list_notes(args)
 
