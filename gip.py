@@ -27,13 +27,29 @@ def get_args():
     args = parser.parse_args()
     return args
 
-def list_notes(args):
-    """list contents of Notes folder"""
+def connect_to_imap_server(args):
+    """Connect to the GMail IMAP server and return an imaplib.IMAP4 instance to
+       work with the GMail server"""
     username, password = args.username, args.password
     
     # connect to imap server
     imap = imaplib.IMAP4_SSL('imap.gmail.com')
     imap.login(username, password)
+    return imap
+
+def fetch_message(imap, imap_msg_id):
+    """Retrieve a message from IMAP and return it as an email object"""
+    typ, msgdata = imap.fetch(imap_msg_id, '(RFC822)')    
+    encoded_msg = bytes.decode(msgdata[0][1])
+    return email.message_from_string(encoded_msg)    
+
+def show_note(args):
+    """display content of a single Note (specified by IMAP message ID)"""
+    imap = connect_to_imap_server(args)
+
+def list_notes(args):
+    """list contents of Notes folder"""
+    imap = connect_to_imap_server(args)
     
     # grab a list the id, date and subject of messages in the Notes folder
     imap.select("Notes")
@@ -41,9 +57,7 @@ def list_notes(args):
     
     # print the id, date and subject to stdout
     for imap_id in bytes.decode(msgnums[0]).split():
-        typ, msgdata = imap.fetch(imap_id, '(RFC822)')    
-        encoded_msg = bytes.decode(msgdata[0][1])
-        msg = email.message_from_string(encoded_msg)    
+        msg = fetch_message(imap, imap_id)
         print(imap_id, msg['Date'], msg['Subject'])
 
 if __name__ == "__main__":
