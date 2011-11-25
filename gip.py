@@ -24,6 +24,7 @@ def get_args():
     parser.add_argument('-u', '--username', required=True)
     parser.add_argument('-p', '--password', required=True)
     parser.add_argument('action')
+    parser.add_argument('-m', '--messageId', required=False)
     args = parser.parse_args()
     return args
 
@@ -35,6 +36,7 @@ def connect_to_imap_server(args):
     # connect to imap server
     imap = imaplib.IMAP4_SSL('imap.gmail.com')
     imap.login(username, password)
+    imap.select("Notes")
     return imap
 
 def fetch_message(imap, imap_msg_id):
@@ -44,15 +46,16 @@ def fetch_message(imap, imap_msg_id):
     return email.message_from_string(encoded_msg)    
 
 def show_note(args):
-    """display content of a single Note (specified by IMAP message ID)"""
+    """Display content of a single Note (specified by IMAP message ID)"""
     imap = connect_to_imap_server(args)
 
+    msg = fetch_message(imap, args.messageId)
+    print(msg)
+
 def list_notes(args):
-    """list contents of Notes folder"""
+    """Print a list of Notes to standard output"""
     imap = connect_to_imap_server(args)
     
-    # grab a list the id, date and subject of messages in the Notes folder
-    imap.select("Notes")
     (typ, msgnums) = imap.search(None, "All")
     
     # print the id, date and subject to stdout
@@ -64,4 +67,6 @@ if __name__ == "__main__":
     args = get_args()
     if args.action == 'list':
         list_notes(args)
+    elif args.action == 'show':
+        show_note(args)
 
