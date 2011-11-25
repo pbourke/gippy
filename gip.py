@@ -38,9 +38,9 @@ def get_args():
 def connect_to_imap_server(args):
     """Connect to the GMail IMAP server and return an imaplib.IMAP4 instance to
        work with the GMail server"""
-    username, password = args.username, args.password
-    
-    # connect to imap server
+    return _connect_to_imap_server(args.username, args.password)
+
+def _connect_to_imap_server(username, password):
     imap = imaplib.IMAP4_SSL('imap.gmail.com')
     imap.login(username, password)
     imap.select("Notes")
@@ -78,17 +78,17 @@ def now_in_rfc_format():
     return email.utils.formatdate(nowtimestamp)
 
 def add_test_note(args):
-    filename = ""
-    with tempfile.TemporaryFile() as f:
-        f.write("Subject: edit me\r\n")
-        filename = f.name
-
-    # launch $EDITOR to create the note
-    edit_cmd = "vi"
-    if 'EDITOR' in os.environ:
-        edit_cmd = os.environ['EDITOR']        
-
-    os.system(edit_cmd + " " + filename)
+#    filename = ""
+#    with tempfile.TemporaryFile() as f:
+#        f.write("Subject: edit me\r\n")
+#        filename = f.name
+#
+#    # launch $EDITOR to create the note
+#    edit_cmd = "vi"
+#    if 'EDITOR' in os.environ:
+#        edit_cmd = os.environ['EDITOR']        
+#
+#    os.system(edit_cmd + " " + filename)
 
     # format message
     now = now_in_rfc_format() 
@@ -108,6 +108,15 @@ def add_test_note(args):
     # imap append
     imap = connect_to_imap_server(args)
     imap.append('Notes', '', imaplib.Time2Internaldate(time.time()), str.encode(str(msg)))
+
+def edit_test_note(args):
+# obtain existing note from imap
+# del Subject, Date, Message-Id
+# add new Subject, Date
+# change body 
+# insert new message
+# remove old message - imap.store("16", '+FLAGS', '\\Deleted')
+    pass
 
 if __name__ == "__main__":
     args = get_args()
