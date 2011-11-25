@@ -1,4 +1,4 @@
-"""
+""" vim: ff=unix
 Copyright 2011 Patrick Bourke
 
 Licensed under the Apache License, Version 2.0 (the "License");
