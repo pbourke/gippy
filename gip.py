@@ -57,7 +57,7 @@ def show_note(args):
     imap = connect_to_imap_server(args)
 
     msg = fetch_message(imap, args.messageId)
-    print(msg)
+    print(msg.as_string())
 
 def list_notes(args):
     """Print a list of Notes to standard output"""
