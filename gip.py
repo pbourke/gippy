@@ -49,7 +49,7 @@ def _connect_to_imap_server(username, password):
 def fetch_message(imap, imap_msg_id):
     """Retrieve a message from IMAP and return it as an email object"""
     typ, msgdata = imap.fetch(imap_msg_id, '(RFC822)')    
-    encoded_msg = bytes.decode(msgdata[0][1])
+    encoded_msg = msgdata[0][1]
     return email.message_from_string(encoded_msg)    
 
 def show_note(args):
@@ -65,8 +65,7 @@ def list_notes(args):
     
     (typ, msgnums) = imap.search(None, "All")
     
-    # print the id, date and subject to stdout
-    for imap_id in bytes.decode(msgnums[0]).split():
+    for imap_id in msgnums[0].split():
         msg = fetch_message(imap, imap_id)
         print(imap_id, msg['Date'], msg['Subject'])
 
