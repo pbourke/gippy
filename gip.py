@@ -24,6 +24,7 @@ import time
 import uuid
 import os
 import tempfile
+import sys
 
 def get_args():
     """Read credentials from command line arguments"""
@@ -77,23 +78,44 @@ def now_in_rfc_format():
     return email.utils.formatdate(nowtimestamp)
 
 def add_test_note(args):
-#    filename = ""
-#    with tempfile.TemporaryFile() as f:
-#        f.write("Subject: edit me\r\n")
-#        filename = f.name
-#
-#    # launch $EDITOR to create the note
-#    edit_cmd = "vi"
-#    if 'EDITOR' in os.environ:
-#        edit_cmd = os.environ['EDITOR']        
-#
-#    os.system(edit_cmd + " " + filename)
+    filename = ""
+    with tempfile.NamedTemporaryFile(delete=False) as f:
+        f.write("Subject: replace with subject\n\nreplace with body")
+        filename = f.name
+
+    if len(filename) == 0:
+        print("Couldn't create temporary file")
+        exit(1)
+
+    # launch $EDITOR to create the note
+    edit_cmd = "vi"
+    if 'EDITOR' in os.environ:
+        edit_cmd = os.environ['EDITOR']        
+
+    os.system("%s %s" % (edit_cmd, filename))
+
+    edited_message = ""
+    with open(filename) as f:
+        edited_message = f.read()
+
+    os.remove(filename)
+
+    if len(edited_message.strip()) == 0:
+        print("The edited note was empty - nothing to do!")
+        sys.exit(1)
+
+    edited_email = email.message_from_string(edited_message)
+
+    subject = edited_email['Subject']
+
+    if not subject:
+        subject = "Note"
 
     # format message
     now = now_in_rfc_format() 
 
     msg = email.message.Message()
-    msg['Subject'] = "Another test!"
+    msg['Subject'] = subject
     msg['From'] = args.username
     msg['To'] = args.username
     msg['Content-Type'] = "text/html; charset=utf-8"
@@ -102,7 +124,7 @@ def add_test_note(args):
     msg['Date'] = now
     msg['X-Universally-Unique-Identifier'] = str(uuid.uuid4()).upper()
     # todo: read in tempfile and set its content as payload
-    msg.set_payload("<div>This is a test from Python</div><div><b>bold</b></div><div><ul><li>item 1</li><li>item 2</li></div>")
+    msg.set_payload(edited_email.get_payload())
 
     # imap append
     imap = connect_to_imap_server(args)
