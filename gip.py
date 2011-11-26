@@ -130,6 +130,8 @@ def add_test_note(args):
     imap = connect_to_imap_server(args)
     imap.append('Notes', '', imaplib.Time2Internaldate(time.time()), str.encode(str(msg)))
 
+    # todo: set the Seen flag on the new message
+
 def edit_test_note(args):
 # obtain existing note from imap
 # del Subject, Date, Message-Id
