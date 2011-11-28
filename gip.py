@@ -149,4 +149,7 @@ if __name__ == "__main__":
         show_note(args)
     elif args.action == 'test-add':
         add_test_note(args)
+    elif args.action == 'test-edit':
+        edit_test_note(args)
+
 
