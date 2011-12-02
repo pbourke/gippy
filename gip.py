@@ -81,39 +81,47 @@ def now_in_rfc_format():
     nowtimestamp = time.mktime(nowtuple)
     return email.utils.formatdate(nowtimestamp)
 
+def _save_note_to_server(imap, msg):
+    """Send msg to server via open IMAP connection imap"""
+    # todo: test the \\Seen flag below
+    imap.append('Notes', '\\Seen', imaplib.Time2Internaldate(time.time()), str.encode(str(msg)))
+
 def add_note(args):
     # create stub message and write it to temporary file
     new_note = email.message.Message()
     new_note['Subject'] = "Replace with subject"
     new_note.set_payload("Replace with body")
-    _edit_note(args.username, new_note)
+
+    msg = _edit_note(args.username, new_note)
 
     # imap append
     imap = connect_to_imap_server(args)
-    imap.append('Notes', '', imaplib.Time2Internaldate(time.time()), str.encode(str(msg)))
-
-    # todo: set the Seen flag on the new message
+    _save_note_to_server(imap, msg)
 
 def edit_note(args):
-# obtain existing note from imap
-# del Subject, Date, Message-Id
-# format existing note text
+    # obtain existing note from imap
     imap = connect_to_imap_server(args)
     msg = fetch_message(imap, args.messageId)
-    existing_note = ""
-# shell out to editor
-    email_msg = _edit_note(args.username, existing_note)
-# insert new message
-# remove old message - imap.store("16", '+FLAGS', '\\Deleted')
+    edited_msg = _edit_note(args.username, msg)
+
+    # insert new message
+    _save_note_to_server(imap, edited_msg)
+
+    # remove old message
+    imap.store(args.messageId, '+FLAGS', '\\Deleted')
 
 def _set_header(src, tgt, key, default):
-    """Sets tgt[key] to src[key] if key in src, else sets it to default"""
-    if key in src:
+    """Sets tgt[key] to src[key] if key in src and is nonempty, else sets it to
+    default"""
+    if key in src and src[key]:
         tgt[key] = src[key]
     else:
         tgt[key] = default
 
 def _edit_note(username, note_msg):
+    """Open $EDITOR to edit note_msg"""
+    # write out a temporary file containing the subject and body
+    # of note_msg
     filename = ""
     with tempfile.NamedTemporaryFile(delete=False) as f:
         temp_note = email.message.Message()
@@ -132,6 +140,7 @@ def _edit_note(username, note_msg):
 
     os.system("%s %s" % (edit_cmd, filename))
 
+    # read the edited message and remove the temporary file
     edited_message = ""
     with open(filename) as f:
         edited_message = f.read()
@@ -141,27 +150,21 @@ def _edit_note(username, note_msg):
     if len(edited_message.strip()) == 0:
         exit("The edited note was empty - nothing to do!")
 
-    edited_email = email.message_from_string(edited_message)
-
-    subject = edited_email['Subject']
-
-    if not subject:
-        subject = "Note"
-
-    # format message
+    # return a new message consisting of the edited message merged
+    # with headers from the input message 
     now = now_in_rfc_format() 
 
-    msg = email.message.Message()
-    msg['Subject'] = subject
+    msg = email.message_from_string(edited_message)
+    if 'Subject' not in msg or not msg['Subject']:
+        msg['Subject'] = "Note"
+
     msg['From'] = username
     msg['To'] = username
     msg['Content-Type'] = "text/html; charset=utf-8"
+    msg['Date'] = now    
     _set_header(note_msg, msg, 'X-Uniform-Type-Identifier', 'com.apple.mail-note')
     _set_header(note_msg, msg, 'X-Mail-Created-Date', now)
-    msg['Date'] = now
     _set_header(note_msg, msg, 'X-Universally-Unique-Identifier', str(uuid.uuid4()).upper())
-
-    msg.set_payload(edited_email.get_payload())
 
     return msg
 
@@ -175,5 +178,4 @@ if __name__ == "__main__":
         add_note(args)
     elif args.action == 'edit':
         edit_note(args)
-
 
