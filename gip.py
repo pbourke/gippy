@@ -75,17 +75,51 @@ def list_notes(args):
         print(imap_id, msg['Date'], msg['Subject'])
 
 def now_in_rfc_format():
-    """http://stackoverflow.com/questions/3453177/convert-python-datetime-to-rfc-2822"""
+    """see http://stackoverflow.com/questions/3453177/convert-python-datetime-to-rfc-2822"""
     nowdt = datetime.datetime.now()
     nowtuple = nowdt.timetuple()
     nowtimestamp = time.mktime(nowtuple)
     return email.utils.formatdate(nowtimestamp)
 
-def add_test_note(args):
+def add_note(args):
     # create stub message and write it to temporary file
+    new_note = email.message.Message()
+    new_note['Subject'] = "Replace with subject"
+    new_note.set_payload("Replace with body")
+    _edit_note(args.username, new_note)
+
+    # imap append
+    imap = connect_to_imap_server(args)
+    imap.append('Notes', '', imaplib.Time2Internaldate(time.time()), str.encode(str(msg)))
+
+    # todo: set the Seen flag on the new message
+
+def edit_note(args):
+# obtain existing note from imap
+# del Subject, Date, Message-Id
+# format existing note text
+    imap = connect_to_imap_server(args)
+    msg = fetch_message(imap, args.messageId)
+    existing_note = ""
+# shell out to editor
+    email_msg = _edit_note(args.username, existing_note)
+# insert new message
+# remove old message - imap.store("16", '+FLAGS', '\\Deleted')
+
+def _set_header(src, tgt, key, default):
+    """Sets tgt[key] to src[key] if key in src, else sets it to default"""
+    if key in src:
+        tgt[key] = src[key]
+    else:
+        tgt[key] = default
+
+def _edit_note(username, note_msg):
     filename = ""
     with tempfile.NamedTemporaryFile(delete=False) as f:
-        f.write("Subject: replace with subject\n\nreplace with body")
+        temp_note = email.message.Message()
+        temp_note['Subject'] = note_msg['Subject']
+        temp_note.set_payload(note_msg.get_payload())
+        f.write(temp_note.as_string())
         filename = f.name
 
     if len(filename) == 0:
@@ -119,31 +153,17 @@ def add_test_note(args):
 
     msg = email.message.Message()
     msg['Subject'] = subject
-    msg['From'] = args.username
-    msg['To'] = args.username
+    msg['From'] = username
+    msg['To'] = username
     msg['Content-Type'] = "text/html; charset=utf-8"
-    msg['X-Uniform-Type-Identifier'] = "com.apple.mail-note"
-    msg['X-Mail-Created-Date'] = now
+    _set_header(note_msg, msg, 'X-Uniform-Type-Identifier', 'com.apple.mail-note')
+    _set_header(note_msg, msg, 'X-Mail-Created-Date', now)
     msg['Date'] = now
-    msg['X-Universally-Unique-Identifier'] = str(uuid.uuid4()).upper()
+    _set_header(note_msg, msg, 'X-Universally-Unique-Identifier', str(uuid.uuid4()).upper())
 
     msg.set_payload(edited_email.get_payload())
 
-    # imap append
-    imap = connect_to_imap_server(args)
-    imap.append('Notes', '', imaplib.Time2Internaldate(time.time()), str.encode(str(msg)))
-
-    # todo: set the Seen flag on the new message
-
-def edit_test_note(args):
-# obtain existing note from imap
-# shell out to editor
-# del Subject, Date, Message-Id
-# add new Subject, Date
-# change body 
-# insert new message
-# remove old message - imap.store("16", '+FLAGS', '\\Deleted')
-    pass
+    return msg
 
 if __name__ == "__main__":
     args = get_args()
@@ -151,9 +171,9 @@ if __name__ == "__main__":
         list_notes(args)
     elif args.action == 'show':
         show_note(args)
-    elif args.action == 'test-add':
-        add_test_note(args)
-    elif args.action == 'test-edit':
-        edit_test_note(args)
+    elif args.action == 'add':
+        add_note(args)
+    elif args.action == 'edit':
+        edit_note(args)
 
 
