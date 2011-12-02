@@ -24,16 +24,20 @@ import time
 import uuid
 import os
 import tempfile
-import sys
 
 def get_args():
-    """Read credentials from command line arguments"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-u', '--username', required=True)
+    """Parse and return command line arguments"""
+    parser = argparse.ArgumentParser(description='Add and edit iOS Notes via your favourite editor')
+    parser.add_argument('-u', '--username', help='IMAP server username - ie: example@gmail.com', required=True)
     parser.add_argument('-p', '--password', required=True)
-    parser.add_argument('action')
-    parser.add_argument('-m', '--messageId', required=False)
+    parser.add_argument('action', choices=['list', 'show', 'edit', 'add'], help='action to take')
+    parser.add_argument('messageId', type=int, nargs='?', help='message ID to show or edit')
+
     args = parser.parse_args()
+    
+    if args.action in ['show', 'edit'] and args.messageId == None:
+        exit("You must specify a messageId with %s" % (args.action,))
+
     return args
 
 def connect_to_imap_server(args):
@@ -78,16 +82,16 @@ def now_in_rfc_format():
     return email.utils.formatdate(nowtimestamp)
 
 def add_test_note(args):
+    # create stub message and write it to temporary file
     filename = ""
     with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write("Subject: replace with subject\n\nreplace with body")
         filename = f.name
 
     if len(filename) == 0:
-        print("Couldn't create temporary file")
-        exit(1)
+        exit("Couldn't create temporary file")
 
-    # launch $EDITOR to create the note
+    # launch $EDITOR against temporary file
     edit_cmd = "vi"
     if 'EDITOR' in os.environ:
         edit_cmd = os.environ['EDITOR']        
@@ -101,8 +105,7 @@ def add_test_note(args):
     os.remove(filename)
 
     if len(edited_message.strip()) == 0:
-        print("The edited note was empty - nothing to do!")
-        sys.exit(1)
+        exit("The edited note was empty - nothing to do!")
 
     edited_email = email.message_from_string(edited_message)
 
@@ -123,7 +126,7 @@ def add_test_note(args):
     msg['X-Mail-Created-Date'] = now
     msg['Date'] = now
     msg['X-Universally-Unique-Identifier'] = str(uuid.uuid4()).upper()
-    # todo: read in tempfile and set its content as payload
+
     msg.set_payload(edited_email.get_payload())
 
     # imap append
@@ -134,6 +137,7 @@ def add_test_note(args):
 
 def edit_test_note(args):
 # obtain existing note from imap
+# shell out to editor
 # del Subject, Date, Message-Id
 # add new Subject, Date
 # change body 
