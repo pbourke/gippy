@@ -9,6 +9,7 @@ Usage
 List all notes
 --------------
 **list** displays a summary of the notes on the server   
+
     $python gip.py --username <your-gmail-address> list
     Enter password for <your-gmail-address>:
     ('1', 'Thu, 06 Jan 2011 18:15:14 -0800', 'Note 1')
@@ -18,6 +19,7 @@ List all notes
 Show a note
 -----------
 **show** displays the full contents of a single note
+
     $python gip.py --username <your-gmail-address> show 1
     Enter password for <your-gmail-address>:
     Subject: Note 1
@@ -37,11 +39,13 @@ Show a note
 Edit a note
 -----------
 **edit** launches $EDITOR to upload a new version of an existing note. Behind the scenes, the old note is removed and the new one appended.
+
     $python gip.py --username <your-gmail-address> show 1
     Enter password for <your-gmail-address>:
 
 Add a note
 ----------
 **add** launches $EDITOR to append a new note
+
     $python gip.py --username <your-gmail-address> add
     Enter password for <your-gmail-address>:
