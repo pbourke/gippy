@@ -30,15 +30,18 @@ def get_args():
     """Parse and return command line arguments"""
     parser = argparse.ArgumentParser(description='Add and edit iOS Notes via your favourite editor')
     parser.add_argument('-u', '--username', help='IMAP server username - ie: example@gmail.com', required=True)
+    parser.add_argument('-s', '--server', help='IMAP server hostname', default='imap.gmail.com')
+    parser.add_argument('-p', '--port', help='IMAP server port. If omitted, the default port is used')
+    parser.add_argument('-n', '--no-ssl', help='Do not use SSL. SSL is used by default', action='store_true')
     parser.add_argument('action', choices=['list', 'show', 'edit', 'add'], help='action to take')
     parser.add_argument('messageId', type=int, nargs='?', help='message ID to show or edit')
 
     args = parser.parse_args()
-    
+    print(args)  
     if args.action in ['show', 'edit'] and args.messageId == None:
         exit("You must specify a messageId with %s" % (args.action,))
 
-    password = getpass.getpass("Enter password for %s: " % (args.username,))
+    password = getpass.getpass("Enter password for %s at %s: " % (args.username, args.server))
 
     if not password:
         exit("Must enter a password")
@@ -50,10 +53,16 @@ def get_args():
 def connect_to_imap_server(args):
     """Connect to the GMail IMAP server and return an imaplib.IMAP4 instance to
        work with the GMail server"""
-    return _connect_to_imap_server(args.username, args.password)
+    return _connect_to_imap_server(args.username, args.password, args.server, args.port, args.no_ssl)
 
-def _connect_to_imap_server(username, password):
-    imap = imaplib.IMAP4_SSL('imap.gmail.com')
+def _connect_to_imap_server(username, password, server, port, no_ssl):
+    if no_ssl:
+        port_to_use = port if port else imaplib.IMAP4_PORT
+        imap = imaplib.IMAP4(server, port_to_use)
+    else:
+        port_to_use = port if port else imaplib.IMAP4_SSL_PORT
+        imap = imaplib.IMAP4_SSL(server, port_to_use)
+
     imap.login(username, password)
     imap.select("Notes")
     return imap
