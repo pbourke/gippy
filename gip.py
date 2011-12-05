@@ -37,7 +37,7 @@ def get_args():
     parser.add_argument('messageId', type=int, nargs='?', help='message ID to show or edit')
 
     args = parser.parse_args()
-    print(args)  
+
     if args.action in ['show', 'edit'] and args.messageId == None:
         exit("You must specify a messageId with %s" % (args.action,))
 
